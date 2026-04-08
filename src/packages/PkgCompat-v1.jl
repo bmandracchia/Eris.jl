@@ -297,20 +297,18 @@ end
 
 # (⚠️ Internal API with fallback)
 function _registered_package_completions(partial_name::AbstractString)::Vector{String}
-    # compat
-    try
-        @static if isdefined(REPLMode, :complete_remote_package) && hasmethod(REPLMode.complete_remote_package, (String,))
-            REPLMode.complete_remote_package(partial_name)
-        else
-            # fallback: devolver vector vacío si no existe
-            String[]
-        end
-    catch e
-        @warn "Pkg compat: failed to autocomplete packages" exception=(e,catch_backtrace())
-        String[]
-    end
+	# compat
+	try
+		@static if hasmethod(REPLMode.complete_remote_package, (String,))
+			REPLMode.complete_remote_package(partial_name)
+		else
+			REPLMode.complete_remote_package(partial_name, 1, length(partial_name))[1]
+		end
+	catch e
+		@warn "Pkg compat: failed to autocomplete packages" exception=(e,catch_backtrace())
+		String[]
+	end
 end
-
 
 ###
 # Package versions

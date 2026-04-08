@@ -82,11 +82,60 @@ export function createFileMenu(timeoutValue) {
     // 📂 Open
     const openItems = [
         createMenuItem("Open Image", async function () {
+    
             const tmp = getVarName("tmp")
-            createMDCellWithUI("Load Image", `$(@bind ${tmp} PlutoUI.FilePicker())`)
+            const loaded_index = getVarName("loaded_index")
+            const show_image = getVarName("show_image")
+            const show_info = getVarName("show_info")
+    
+            // 1️⃣ FilePicker
+            createMDCellWithUI(
+                "Load Image",
+    `$(@bind ${tmp} PlutoUI.FilePicker())`
+            )
+    
             await resolveAfterTimeout(timeoutValue)
-            createCellWithCode(`isnothing(${tmp}) ? print("Select an image to load") :
-    JIVECore.Visualize.gif(JIVECore.Process.autoContrast(image_data[JIVECore.Files.loadImage!(image_data, image_keys, ${tmp})]))`)
+    
+            // 2️⃣ Guardar índice
+            createCellWithCode(`
+            ${loaded_index} = isnothing(${tmp}) ? nothing :
+                JIVECore.Files.loadImage!(image_data, image_keys, ${tmp})
+                nothing
+            `)
+    
+            await resolveAfterTimeout(timeoutValue)
+    
+            // 3️⃣ Mostrar imagen
+            createMDCellWithUI(
+`$(@bind ${show_image} PlutoUI.CheckBox()) Show image`, ""
+            )
+    
+            await resolveAfterTimeout(timeoutValue)
+    
+            createCellWithCode(`
+            if ${show_image} && !isnothing(${loaded_index})
+    
+                JIVECore.Visualize.gif(
+                    JIVECore.Process.autoContrast(image_data[${loaded_index}])
+                )
+    
+            end
+            `)
+    
+            await resolveAfterTimeout(timeoutValue)
+    
+            // 4️⃣ Mostrar info
+            createMDCellWithUI(
+`$(@bind ${show_info} PlutoUI.CheckBox()) Show image info`, ""
+            )
+    
+            await resolveAfterTimeout(timeoutValue)
+    
+            createCellWithCode(`
+            if ${show_info} && !isnothing(${loaded_index})
+                JIVECore.Files.showInfo(image_data[${loaded_index}])
+            end
+            `)
         }),
 
         createMenuItem("Open from URL", function () {}),

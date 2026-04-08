@@ -107,6 +107,7 @@ searchItem.addEventListener("search", function () {
 import { createFileMenu } from "./Jive-Sidebar/Jive-FileMenu.js"
 import { createMeasureMenu } from "./Jive-Sidebar/Jive-MeasureMenu.js"
 import { createEditMenu } from "./Jive-Sidebar/Jive-EditMenu.js"
+import { createImageMenu } from "./Jive-Sidebar/Jive-ImageMenu.js"
 import { createProcessMenu } from "./Jive-Sidebar/Jive-ProcessMenu.js"
 import { createViewMenu } from "./Jive-Sidebar/Jive-ViewMenu.js"
 
@@ -114,6 +115,7 @@ import { createViewMenu } from "./Jive-Sidebar/Jive-ViewMenu.js"
 const itemBarFile = createFileMenu(timeoutValue)
 const itemBarAdjust = createMeasureMenu(timeoutValue)
 const itemBarEdit = createEditMenu(timeoutValue)
+const itemBarImage = createImageMenu(timeoutValue)
 const itemBarProcess = createProcessMenu(timeoutValue)
 const itemBarView = createViewMenu(timeoutValue)
 
@@ -124,6 +126,7 @@ sideBar.appendChild(titleDiv)
 sideBar.appendChild(searchItem)
 sideBar.appendChild(itemBarFile)
 sideBar.appendChild(itemBarEdit)
+sideBar.appendChild(itemBarImage)
 sideBar.appendChild(itemBarAdjust)
 sideBar.appendChild(itemBarProcess)
 sideBar.appendChild(itemBarView)

@@ -158,7 +158,8 @@ $(@bind ${apply} confirm(MultiSelect(image_keys)) )"
         createMenuItem("Histogram Match", function () {}),
         createMenuItem("Color Balance", function () {}),
         createMenuItem("Invert Colors", function () {}),
-        createMenuItem("Grayscale Conversion", function () {}),
+        // createMenuItem("Grayscale Conversion", function () {}),
+        
     ]
 
     // Transform
