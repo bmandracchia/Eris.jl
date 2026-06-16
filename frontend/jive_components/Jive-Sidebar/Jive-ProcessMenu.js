@@ -311,6 +311,14 @@ end`)
 // WATERSHED SEGMENTATION
 ////////////////////////
 
+////////////////////////
+// WATERSHED SEGMENTATION
+////////////////////////
+
+////////////////////////
+// WATERSHED SEGMENTATION
+////////////////////////
+
 createMenuItem("Watershed Segmentation", async function () {
 
     const sel_im = getVarName("ws_im");
@@ -325,6 +333,9 @@ createMenuItem("Watershed Segmentation", async function () {
     const ws_slice = getVarName("ws_slice");
     const ws_dist_threshold = getVarName("ws_dist_threshold");
 
+    // NUEVOS
+    const ws_output_name = getVarName("ws_output_name");
+
     ////////////////////////////////////
     // UI PANEL
     ////////////////////////////////////
@@ -334,6 +345,9 @@ createMenuItem("Watershed Segmentation", async function () {
         `
 Select image:
 $(@bind ${sel_im} Select([nothing, image_keys...]))
+
+Output name:
+$(@bind ${ws_output_name} TextField(default="watershed_result"))
 
 Threshold method:
 $(@bind ${ws_thr_method} Select(["otsu","manual"]))
@@ -349,7 +363,7 @@ $(@bind ${ws_apply_mask} PlutoUI.CheckBox())
 
 Apply size filter:
 $(@bind ${ws_size_filter_enable} PlutoUI.CheckBox())
-        `
+`
     );
 
     await resolveAfterTimeout(300);
@@ -359,106 +373,129 @@ $(@bind ${ws_size_filter_enable} PlutoUI.CheckBox())
     ////////////////////////////////////
 
     createCellWithCode(`
-        if !isnothing(${sel_im})
-        
-            img_tmp = image_data[${sel_im}]
-        
-            if ndims(img_tmp) == 3
-        
+if !isnothing(${sel_im})
+
+    img_tmp = image_data[${sel_im}]
+
+    if ndims(img_tmp) == 3
+
         md"""
         Slice (3D image):
         $(@bind ${ws_slice} Slider(1:size(img_tmp,3), show_value=true))
         """
-        
-            else
-                nothing
-            end
-        
-        end
-        `);
+
+    else
+        nothing
+    end
+
+end
+    `);
+
     await resolveAfterTimeout(300);
+
+    ////////////////////////////////////
+    // Manual threshold slider
+    ////////////////////////////////////
 
     createCellWithCode(`
 if ${ws_thr_method} == "manual"
-# Threshold slider solo si manual
-md"""
-Threshold value (manual only):
-$(@bind ${ws_thr_value} Slider(0:0.01:1, default=0.5, show_value=true))
-""" 
-else nothing
-end
-`);
-await resolveAfterTimeout(300);
-createCellWithCode(`
-if ${ws_size_filter_enable}
-# Size filter solo si activado
-md"""
-Object size filter (min/max):
-$(@bind ${ws_size_filter} PlutoUI.RangeSlider(0:10:500))
-""" else nothing
-end
 
-`);
+    md"""
+    Threshold value (manual only):
+    $(@bind ${ws_thr_value} Slider(0:0.01:1, default=0.5, show_value=true))
+    """
+
+else
+    nothing
+end
+    `);
 
     await resolveAfterTimeout(300);
 
     ////////////////////////////////////
-    // Processing
+    // Size filter slider
+    ////////////////////////////////////
+
+    createCellWithCode(`
+if ${ws_size_filter_enable}
+
+    md"""
+    Object size filter (min/max):
+    $(@bind ${ws_size_filter} PlutoUI.RangeSlider(0:10:500))
+    """
+
+else
+    nothing
+end
+    `);
+
+    await resolveAfterTimeout(300);
+
+    ////////////////////////////////////
+    // PROCESSING + SAVE
     ////////////////////////////////////
 
     createCellWithCode(`
 
-${ws_key} = nothing
+begin
 
-if !isnothing(${sel_im})
+    ${ws_key} = nothing
 
-    let
-      
-        key = string(${sel_im}, "_ws")
+    if !isnothing(${sel_im})
 
-        img_tmp = image_data[${sel_im}]
 
-        img_orig_local = if ndims(img_tmp) == 3
-            copy(img_tmp[:,:,${ws_slice}])
-        else
-            copy(img_tmp)
+        let
+
+            key = isempty(${ws_output_name}) ? string(${sel_im}, "_ws") : ${ws_output_name}
+
+            img_tmp = image_data[${sel_im}]
+
+            img_orig_local = if ndims(img_tmp) == 3
+                copy(img_tmp[:,:,${ws_slice}])
+            else
+                copy(img_tmp)
+            end
+
+            # -----------------------------
+            # Apply watershed
+            # -----------------------------
+            if ${ws_size_filter_enable}
+
+                img_ws, lbl_ws = JIVECore.Process.imWatershed(
+                    img_orig_local,
+                    [${ws_size_filter}[1], ${ws_size_filter}[end]];
+                    threshold = ${ws_thr_method} == "manual" ? ${ws_thr_value} : nothing,
+                    dist_threshold=${ws_dist_threshold},
+                    clear_border=${ws_clear_border},
+                )
+
+            else
+
+                img_ws, lbl_ws = JIVECore.Process.imWatershed(
+                    img_orig_local;
+                    threshold = ${ws_thr_method} == "manual" ? ${ws_thr_value} : nothing,
+                    dist_threshold=${ws_dist_threshold},
+                    clear_border=${ws_clear_border},
+                    apply_mask=${ws_apply_mask}
+                )
+
+            end
+
+            # -----------------------------
+            # Store image
+            # -----------------------------
+            image_data[key] = img_ws
+
+            if !(key in image_keys)
+                push!(image_keys, key)
+            end
+
+            global ${ws_key}
+            ${ws_key} = key
+
+            println("Image stored as \\"$(key)\\" ")
+
         end
-
-        # -----------------------------
-        # Apply watershed
-        # -----------------------------
-        if ${ws_size_filter_enable}
-            img_ws, lbl_ws = JIVECore.Process.imWatershed(
-                img_orig_local,
-                [${ws_size_filter}[1], ${ws_size_filter}[end]];
-                threshold = ${ws_thr_method} == "manual" ? ${ws_thr_value} : nothing,
-                dist_threshold=${ws_dist_threshold},
-                clear_border=${ws_clear_border},
-                
-            )
-        else
-            img_ws, lbl_ws = JIVECore.Process.imWatershed(
-                img_orig_local;
-                threshold = ${ws_thr_method} == "manual" ? ${ws_thr_value} : nothing,
-                dist_threshold=${ws_dist_threshold},
-                clear_border=${ws_clear_border},
-                apply_mask=${ws_apply_mask}
-            )
-        end
-
-        # -----------------------------
-        # Store image (sobrescribe)
-        # -----------------------------
-        image_data[key] = img_ws
-
-        if !(key in image_keys)
-            push!(image_keys, key)
-        end
-
-        global ${ws_key}
-        ${ws_key} = key
-
-        println("Image stored as \\"$(key)\\" ")
 
     end
 
@@ -470,7 +507,7 @@ nothing
     await resolveAfterTimeout(300);
 
     ////////////////////////////////////
-    // Visualization
+    // Visualization checkbox
     ////////////////////////////////////
 
     createMDCellWithUI(
@@ -480,12 +517,20 @@ nothing
 
     await resolveAfterTimeout(300);
 
+    ////////////////////////////////////
+    // Visualization
+    ////////////////////////////////////
+
     createCellWithCode(`
-if ${ws_show} && !isnothing(${ws_key})
-    
+
+if ${ws_show} && !isnothing(${ws_key}) && haskey(image_data, ${ws_key})
+
     img_water = copy(image_data[${ws_key}])
+
     JIVECore.Visualize.gif(img_water)
+
 end
+
     `);
 
 }),

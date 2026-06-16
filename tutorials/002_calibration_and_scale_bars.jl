@@ -69,29 +69,29 @@ md"""
 
 # ╔═╡ 8ea6e7ab-6048-4414-9d33-c4a76899fa64
 md"""
-# ⚙️ Calibrar Parámetros de la Imagen
+# ⚙️ Calibrate Image Parameters
 
-Esta sección permite **calibrar los ejes de la imagen** (horizontal, vertical y tiempo) usando valores físicos y unidades.
+This section allows you to **calibrate the image axes** (horizontal, vertical, and time) using physical values and units.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona la imagen**  
-   Elige la imagen que quieres calibrar:
+1. **Select the image**  
+   Choose the image you want to calibrate:  
    $(@bind sel_im Select([nothing, image_keys...]))
 
-2. **Elige los ejes a calibrar**  
-   Marca los ejes que deseas calibrar: Horizontal, Vertical, y/o Tiempo.
+2. **Choose the axes to calibrate**  
+   Check the axes you want to calibrate: Horizontal, Vertical, and/or Time.
 
-3. **Ingresa los valores de calibración**  
-   - Horizontal value y unidad  
-   - Vertical value y unidad  
-   - Tiempo value y unidad (por ejemplo, segundos o milisegundos)
+3. **Enter calibration values**  
+   - Horizontal value and unit  
+   - Vertical value and unit  
+   - Time value and unit (for example, seconds or milliseconds)
 
-4. **Calibrar imagen**  
-   La imagen se calibrará de forma automática una vez seleccionada.  
-   Esto creará una **nueva imagen calibrada** con un sufijo `_calibrated`.  
+4. **Calibrate image**  
+   The image will be calibrated automatically once selected.  
+   This will create a **new calibrated image** with the `_calibrated` suffix.  
 
-> 💡 Consejo: Primero calibra antes de dibujar scalebars o timestamps para que las unidades físicas se apliquen correctamente.
+> 💡 Tip: Calibrate first before drawing scalebars or timestamps so that physical units are applied correctly.
 """
 
 # ╔═╡ ea0e2eeb-f191-485e-ae54-397811ac872f
@@ -169,25 +169,25 @@ Time unit: $(@bind t_unit1773838068395 Select(["s", "ms"]))
 
 # ╔═╡ 2d24252c-bc76-409a-8d3f-96437b4b0f1d
 md"""
-# 📏 Dibujar Barra de Escala
+# 📏 Draw Scale Bar
 
-Esta sección permite **agregar barras de escala** a la imagen calibrada.
+This section allows you to **add scale bars** to a calibrated image.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona la imagen**  
-   Elige la imagen calibrada a la que quieres añadir la barra de escala:
-   $(@bind sb_im Select(image_keys))
+1. **Select the image**  
+   Choose the calibrated image to which you want to add the scale bar:  
+   $(@bind sb_im Select([nothing, image_keys...]))
 
-2. **Configura la barra de escala horizontal**  
-   - Tamaño de la barra horizontal
-   - Esquina donde se dibuja (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
+2. **Configure the horizontal scale bar**  
+   - Horizontal bar size  
+   - Corner where it is drawn (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
 
-3. **Configura la barra de escala vertical**  
-   - Tamaño de la barra vertical
-   - Esquina donde se dibuja
+3. **Configure the vertical scale bar**  
+   - Vertical bar size  
+   - Corner where it is drawn  
 
-> 💡 Consejo: Solo aplica la barra de escala sobre imágenes calibradas para que las longitudes correspondan a unidades físicas.
+> 💡 Tip: Apply the scale bar only to calibrated images so that the lengths correspond to physical units.
 """
 
 # ╔═╡ 301226ee-0f3d-472a-9dfc-32b6dc9d3eb9
@@ -274,24 +274,24 @@ $(@bind sb_v_corner1775557460103 Select([:bottomleft, :bottomright, :topleft, :t
 
 # ╔═╡ 4f8cc60d-6b81-4fac-95e1-3b755ca5f811
 md"""
-# ⏱ Añadir Timestamp
+# ⏱ Add Timestamp
 
-Esta sección permite **agregar timestamps a la imagen**, mostrando el tiempo de cada frame en la esquina seleccionada.
+This section allows you to **add timestamps to the image**, displaying the time of each frame in the selected corner.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona la imagen**  
-   Solo se permite **una imagen** a la vez:
-   $(@bind timestamp_img Select(image_keys))
+1. **Select the image.**  
+   Only **one image** is allowed at a time:  
+   $(@bind timestamp_img Select([nothing, image_keys...]))
 
-2. **Opcional: selecciona los frames**  
-   Puedes elegir los frames específicos a los que se agregará el timestamp (0-indexed).
+2. **Optional: select frames**  
+   You can choose specific frames to which the timestamp will be added (0-indexed).
 
-3. **Configura el estilo del timestamp**  
-   - Font size: tamaño de la letra
-   - Corner: esquina donde se dibuja el timestamp (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
+3. **Configure the timestamp style**  
+   - Font size: size of the text  
+   - Corner: corner where the timestamp is drawn (Top-Left, Top-Right, Bottom-Left, Bottom-Right)
 
-> 💡 Consejo: Solo aplica timestamps después de calibrar y/o agregar barras de escala si quieres que sean visibles en la misma imagen.
+> 💡 Tip: Apply timestamps only after calibrating and/or adding scale bars if you want them to be visible in the same image.
 """
 
 # ╔═╡ fbf804de-2ee6-4b07-97b2-5c63198595b8
@@ -299,7 +299,7 @@ md"""
 ##### Timestamp Options
 
 Image to add timestamp:
-$(@bind timestamp_img1775558009227 Select(image_keys))  // solo una
+$(@bind timestamp_img1775558009227 Select([nothing, image_keys...]))
 
 Font size:
 $(@bind timestamp_fontsize1775558009227 NumberField(0.01:0.01:0.2, default=0.06))
@@ -332,24 +332,24 @@ end
 
 # ╔═╡ d0ea3262-935b-47d5-9424-11cc053fde47
 md"""
-# 🖼 Visualizador de Mosaico
+# 🖼 Mosaic Viewer
 
-Esta sección permite **visualizar varias imágenes y frames en un mosaico**.
+This section allows you to **visualize multiple images and frames in a mosaic**.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona las imágenes**  
-   Elige una o varias imágenes a mostrar:
+1. **Select the images**  
+   Choose one or more images to display:  
    $(@bind mosaic_imgs MultiSelect(image_keys))
 
-2. **Opcional: selecciona los frames**  
-   Puedes elegir los frames específicos (0-indexed) que quieres mostrar de cada imagen.
+2. **Optional: select frames**  
+   You can choose specific frames (0-indexed) that you want to display from each image.
 
-3. **Configura el mosaico**  
-   - Rows: número de filas del mosaico
-   - Columns: número de columnas del mosaico
+3. **Configure the mosaic**  
+   - Rows: number of rows in the mosaic  
+   - Columns: number of columns in the mosaic  
 
-> 💡 Consejo: Si seleccionas múltiples imágenes y frames, cada frame se mostrará como una imagen separada en el mosaico.
+> 💡 Tip: If you select multiple images and frames, each frame will be displayed as a separate image in the mosaic.
 """
 
 # ╔═╡ 12c68d73-4052-4f09-b376-94cee5136024

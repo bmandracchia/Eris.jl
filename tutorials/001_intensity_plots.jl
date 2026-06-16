@@ -23,28 +23,28 @@ pwd()
 
 # ╔═╡ 9a639e0f-18a4-4bbc-ad51-4cd1774ee3da
 md"""
-# 📂 Cargar una Imagen
+# 📂 Load an Image
 
-Esta sección te permite **abrir y visualizar imágenes** desde tu disco.
+This section allows you to **open and view images** from your disk.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona un archivo**  
-   Usa el selector de archivos para elegir la imagen que quieres cargar:
+1. **Select a file**  
+   Use the file picker to choose the image you want to load:  
    $(@bind tmp PlutoUI.FilePicker())
 
-2. **Cargar la imagen**  
-   La imagen seleccionada se cargará en la variable interna `image_data`. Esto te permitirá trabajar con ella en los siguientes pasos.
+2. **Load the image**  
+   The selected image will be loaded into the internal variable `image_data`. This will allow you to work with it in the following steps.
 
-3. **Mostrar imagen**  
-   Marca la casilla para visualizar la imagen cargada:
+3. **Display image**  
+   Check the box to display the loaded image:  
    $(@bind show_image PlutoUI.CheckBox()) Show image
 
-4. **Mostrar información de la imagen**  
-   Marca la casilla para ver detalles de la imagen como dimensiones y tipo de datos:
+4. **Display image information**  
+   Check the box to view image details such as dimensions and data type:  
    $(@bind show_info PlutoUI.CheckBox()) Show image info
 
-> 💡 Consejo: Primero carga la imagen antes de intentar mostrarla o analizarla.
+> 💡 Tip: Load the image first before trying to display or analyze it.
 """
 
 # ╔═╡ bddf073d-0a54-4fa6-bca3-070911e1729c
@@ -98,29 +98,29 @@ md"""
 
 # ╔═╡ 53e4bcdf-2e4b-45f4-9fda-b922922980da
 md"""
-# 📈 Perfil de Intensidad en Línea
+# 📈 Line Intensity Profile
 
-Esta sección permite **analizar la intensidad de los píxeles a lo largo de una línea** en la imagen seleccionada.
+This section allows you to **analyze pixel intensity along a line** in the selected image.
 
-**Pasos para usarlo:**
+**Steps to use it:**
 
-1. **Selecciona la imagen**  
-   Elige de la lista la imagen que quieres analizar:
+1. **Select the image**  
+   Choose from the list the image you want to analyze:  
    $(@bind sel_im Select([nothing, image_keys...]))
 
-2. **Define los puntos de la línea**  
-   - Punto inicial `(X1, Y1)`:
+2. **Define the line points**  
+   - Starting point `(X1, Y1)`:
      - X1: $(@bind x1 NumberField(1:10000, default=100))
      - Y1: $(@bind y1 NumberField(1:10000, default=100))
-   - Punto final `(X2, Y2)`:
+   - Ending point `(X2, Y2)`:
      - X2: $(@bind x2 NumberField(1:10000, default=200))
      - Y2: $(@bind y2 NumberField(1:10000, default=200))
 
-3. **Generar gráfico de intensidad**  
-   Se mostrará un gráfico con la intensidad de los píxeles a lo largo de la línea definida.
+3. **Generate intensity plot**  
+   A plot will be displayed showing the pixel intensity along the defined line.
 
-4. **Mostrar línea en la imagen**  
-   Se dibuja la línea seleccionada sobre la imagen para visualizar exactamente qué se está analizando.
+4. **Display line on the image**  
+   The selected line is drawn on the image to clearly visualize what is being analyzed.
 """
 
 # ╔═╡ c8e08e32-cb09-4be5-9f48-e9d199f4ecfc

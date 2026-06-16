@@ -8,56 +8,718 @@ using PlutoPlotly, PlutoUI
 import Main.PlutoRunner.JIVECore.Data.image_data as image_data
 import Main.PlutoRunner.JIVECore.Data.image_keys as image_keys
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 3d458265-ddc8-49af-ab86-0b82f01d5905
 using Distributions, StatsPlots
 
-# ╔═╡ ce561158-ff61-11f0-0fb3-b1fbadb6d77f
-img_path = "/Users/yi/JIVE/Demo Images/Widefield Images/Segmentation/Nuclei.tif"
-JIVECore.Files.showInfo(img_path)
+# ╔═╡ ef0cd906-8266-4843-8938-29e852aeed21
+md"""
+##### Load Image
+$(@bind tmp1778059209883 PlutoUI.FilePicker())
+"""
 
-# ╔═╡ b2afb52c-245d-4a14-91f0-00338c885f95
-img = JIVECore.Files.loadImage(img_path);
 
-# ╔═╡ 65b622d2-f27a-4bf3-92db-93d30331090d
-JIVECore.Files.showInfo(img)
+# ╔═╡ 46fce1dc-832e-4654-befb-26705c34257b
 
-# ╔═╡ 41983fba-521a-4889-82fc-b578988ddbf8
-JIVECore.Process.autoContrast(img)
+            loaded_index1778059209883 = isnothing(tmp1778059209883) ? nothing :
+                JIVECore.Files.loadImage!(image_data, image_keys, tmp1778059209883)
+                nothing
+            
 
-# ╔═╡ 40355151-858c-4036-959c-e661dd5eceb5
-mask, lbl = JIVECore.Process.imWatershed(img, dist_threshold=0.01, clear_border=false, apply_mask=true);
-mask
 
-# ╔═╡ 12aa752a-534b-4f01-86f9-8af60cec2cea
-JIVECore.Analyze.region_stats(lbl, img)
+# ╔═╡ 7b7a53dc-ec78-4910-a09c-ffd37e060b39
+md"""
+##### $(@bind show_image1778059209883 PlutoUI.CheckBox()) Show image
 
-# ╔═╡ 67793a85-9aa7-4ef9-b144-2b2f0cc991f1
-mask1, lbl1 = JIVECore.Process.imWatershed(img, [60,200], dist_threshold=.01, clear_border=true)
-mask1
+"""
 
-# ╔═╡ eefd3fa5-ae4e-4a3b-a0ad-98dd2ebb853b
-JIVECore.Data.Gray.(lbl1./500)
 
-# ╔═╡ ec51ebb2-6dbe-4111-b48e-1637edd1b869
-df = JIVECore.Analyze.region_stats(lbl1, img, stats=[:mean, :std, :min, :max, :area, :count, :perimeter])
+# ╔═╡ 0afaa75e-a832-4e62-8569-18555a0cfed0
 
-# ╔═╡ f7f78759-b888-4b3c-a2d5-96017c8a1777
-JIVECore.Visualize.jive_theme()
+            if show_image1778059209883 && !isnothing(loaded_index1778059209883)
+    
+                JIVECore.Visualize.gif(
+                    JIVECore.Process.autoContrast(image_data[loaded_index1778059209883])
+                )
+    
+            end
+            
 
-# ╔═╡ dd06e9c5-1ef7-4aaa-af34-ad5aaa375f91
-JIVECore.Visualize.showDist(df.count; fit_dist=Normal)
 
-# ╔═╡ 95f46300-70fe-427e-b231-f8adbb4b5d79
-r = 1:15
-JIVECore.Visualize.showBar(df.count, r; 
-    highlight_max=true, xlabel="Cell ID", title="Pixel Counts \n\n")
+# ╔═╡ c983d629-39ca-4abb-bf28-df48635e67b8
+md"""
+##### $(@bind show_info1778059209883 PlutoUI.CheckBox()) Show image info
 
-# ╔═╡ 64f04029-7587-49ae-8932-9ee835ff6813
-JIVECore.Visualize.showBar(df.count, r; 
-    highlight_idx=7, color=:gray, highlight_color=:red3, xlabel="Cell ID", title="Pixel Counts \n\n")
+"""
 
-# ╔═╡ dea04bad-dbc0-4200-966a-d8f4e1d14a56
-JIVECore.Process.imHistogram(img, true, normalize=true)
+
+# ╔═╡ 363a6eff-0705-4418-906e-96afd9ba2baf
+
+            if show_info1778059209883 && !isnothing(loaded_index1778059209883)
+                JIVECore.Files.showInfo(image_data[loaded_index1778059209883])
+            end
+            
+
+
+# ╔═╡ 68812098-f0ce-41ea-ba6d-fec40c627645
+md"""
+# 🌊 Watershed Segmentation
+
+This section allows you to perform **watershed-based image segmentation** for separating connected objects or regions.
+
+**Steps to use it:**
+
+1. **Select the image**  
+   Choose the image to segment:  
+   $(@bind ws_im Select([nothing, image_keys...]))
+
+2. **Choose an output name**  
+   Define the name used to store the segmented result:  
+   $(@bind ws_output_name TextField(default="watershed_result"))
+
+3. **Select threshold method**  
+   Choose how the binary mask is generated before watershed:
+   - `"otsu"` → automatic thresholding  
+   - `"manual"` → user-defined threshold value  
+
+4. **Adjust watershed parameters**
+   - **Distance threshold** controls separation sensitivity between objects  
+   - **Clear border** removes objects touching image borders  
+   - **Apply mask** applies the binary mask to the final segmentation  
+   - **Size filter** removes objects outside a selected size range  
+
+5. **3D images**
+   If the selected image is 3D, you can choose which slice to process.
+
+6. **Run segmentation**
+   The watershed segmentation is automatically applied using the selected parameters.
+
+7. **Store result**
+   The segmented image is stored in `image_data` using the selected output name.
+
+8. **Visualize result**
+   Enable visualization to display the segmented image.
+
+> 💡 Tip: Watershed segmentation is especially useful for separating touching cells, particles, nuclei, or overlapping objects in microscopy and biomedical imaging.
+"""
+
+# ╔═╡ bcc4f7e7-4330-4dea-8cef-2ff6bf49f6d2
+md"""
+##### Watershed Segmentation
+
+Select image:
+$(@bind ws_im1778141755325 Select([nothing, image_keys...]))
+
+Output name:
+$(@bind ws_output_name1778141755325 TextField(default="watershed_result"))
+
+Threshold method:
+$(@bind ws_thr_method1778141755325 Select(["otsu","manual"]))
+
+Distance threshold:
+$(@bind ws_dist_threshold1778141755325 Slider(0:0.01:0.5, default=0.01, show_value=true))
+
+Clear border:
+$(@bind ws_clear_border1778141755325 PlutoUI.CheckBox())
+
+Apply mask:
+$(@bind ws_apply_mask1778141755325 PlutoUI.CheckBox())
+
+Apply size filter:
+$(@bind ws_size_filter_enable1778141755325 PlutoUI.CheckBox())
+
+"""
+
+
+# ╔═╡ 58513bf1-31ed-46ea-9f1b-c313551d9c80
+
+if !isnothing(ws_im1778141755325)
+
+    img_tmp = image_data[ws_im1778141755325]
+
+    if ndims(img_tmp) == 3
+
+        md"""
+        Slice (3D image):
+        $(@bind ws_slice1778141755325 Slider(1:size(img_tmp,3), show_value=true))
+        """
+
+    else
+        nothing
+    end
+
+end
+    
+
+
+# ╔═╡ 4beff913-f56e-4c04-9673-64f2be0a4047
+
+if ws_thr_method1778141755325 == "manual"
+
+    md"""
+    Threshold value (manual only):
+    $(@bind ws_thr_value1778141755325 Slider(0:0.01:1, default=0.5, show_value=true))
+    """
+
+else
+    nothing
+end
+    
+
+
+# ╔═╡ d71046f2-896d-4230-a2ac-e48e19e55681
+
+if ws_size_filter_enable1778141755325
+
+    md"""
+    Object size filter (min/max):
+    $(@bind ws_size_filter1778141755325 PlutoUI.RangeSlider(0:10:500))
+    """
+
+else
+    nothing
+end
+    
+
+
+# ╔═╡ 1d81d26c-96fb-4caf-9cb5-832b416a2ce9
+
+
+begin
+
+    ws_key1778141755325 = nothing
+
+    if !isnothing(ws_im1778141755325)
+
+
+        let
+
+            key = isempty(ws_output_name1778141755325) ? string(ws_im1778141755325, "_ws") : ws_output_name1778141755325
+
+            img_tmp = image_data[ws_im1778141755325]
+
+            img_orig_local = if ndims(img_tmp) == 3
+                copy(img_tmp[:,:,ws_slice1778141755325])
+            else
+                copy(img_tmp)
+            end
+
+            # -----------------------------
+            # Apply watershed
+            # -----------------------------
+            if ws_size_filter_enable1778141755325
+
+                img_ws, lbl_ws = JIVECore.Process.imWatershed(
+                    img_orig_local,
+                    [ws_size_filter1778141755325[1], ws_size_filter1778141755325[end]];
+                    threshold = ws_thr_method1778141755325 == "manual" ? ws_thr_value1778141755325 : nothing,
+                    dist_threshold=ws_dist_threshold1778141755325,
+                    clear_border=ws_clear_border1778141755325,
+                )
+
+            else
+
+                img_ws, lbl_ws = JIVECore.Process.imWatershed(
+                    img_orig_local;
+                    threshold = ws_thr_method1778141755325 == "manual" ? ws_thr_value1778141755325 : nothing,
+                    dist_threshold=ws_dist_threshold1778141755325,
+                    clear_border=ws_clear_border1778141755325,
+                    apply_mask=ws_apply_mask1778141755325
+                )
+
+            end
+
+            # -----------------------------
+            # Store image
+            # -----------------------------
+            image_data[key] = img_ws
+
+            if !(key in image_keys)
+                push!(image_keys, key)
+            end
+
+            global ws_key1778141755325
+            ws_key1778141755325 = key
+
+            println("Image stored as \"$(key)\" ")
+
+        end
+
+    end
+
+end
+
+nothing
+    
+
+
+# ╔═╡ 6e27a5a0-d636-4f57-a45d-d6d4d3328245
+md"""
+##### $(@bind ws_show1778141755325 PlutoUI.CheckBox()) Show Watershed image
+
+"""
+
+
+# ╔═╡ ca8b370a-a53d-43e8-aa51-b0b6a328bf6d
+
+
+if ws_show1778141755325 && !isnothing(ws_key1778141755325) && haskey(image_data, ws_key1778141755325)
+
+    img_water = copy(image_data[ws_key1778141755325])
+
+    JIVECore.Visualize.gif(img_water)
+
+end
+
+    
+
+
+# ╔═╡ 09f47719-53ac-4d19-82b8-e7221a3cdf1d
+
+
+# ╔═╡ 03cc2c33-a019-4bd0-b316-7e5f3ce11294
+md"""
+##### Analyze Particles
+
+Label image:
+$(@bind label_image1778140070633 Select([nothing, image_keys...]))
+
+Intensity image (optional):
+$(@bind intensity_image1778140070633 Select([nothing, image_keys...]))
+
+Statistics:
+$(@bind stats_selection1778140070633 MultiSelect([
+:count,
+:centroid,
+:bbox,
+:aspect_ratio,
+:perimeter,
+:circularity,
+:roundness,
+:major_axis,
+:minor_axis,
+:angle,
+:eccentricity,
+:mean,
+:std,
+:min,
+:max,
+:area
+]))
+        
+"""
+
+
+# ╔═╡ cf097589-bf42-4dbb-9a2e-1f142a648d25
+
+if !isnothing(label_image1778140070633)
+    let 
+
+        labels = image_data[label_image1778140070633]
+       
+        stats = Symbol.(stats_selection1778140070633)
+
+        if isnothing(intensity_image1778140070633)
+
+                df = JIVECore.Analyze.region_stats(labels; stats=stats)
+
+        else
+
+            img = image_data[intensity_image1778140070633]
+            df = JIVECore.Analyze.region_stats(labels, img; stats=stats)
+
+        end
+        df
+    end
+end
+    
+
+
+# ╔═╡ 86a4d5f7-5125-48c7-9c5d-050c559d70e8
+md"""
+# 📊 Analyze Particles
+
+This section allows you to compute **quantitative measurements from labeled objects** in an image.
+
+The analysis is performed on a **label image**, where each object has a unique integer label.
+
+**Steps to use it:**
+
+1. **Select the label image**  
+   Choose the segmented or labeled image containing the objects to analyze:  
+   $(@bind label_image Select([nothing, image_keys...]))
+
+2. **Optional intensity image**  
+   Select a grayscale or intensity image if you want to compute intensity-based statistics:  
+   $(@bind intensity_image Select([nothing, image_keys...]))
+
+3. **Choose statistics**  
+   Select one or more measurements to compute for each object:
+   - `count` → number of objects  
+   - `centroid` → object center coordinates  
+   - `bbox` → bounding box  
+   - `aspect_ratio` → width-to-height ratio  
+   - `perimeter` → object perimeter  
+   - `circularity` → shape circularity measure  
+   - `roundness` → object roundness  
+   - `major_axis` / `minor_axis` → ellipse axes lengths  
+   - `angle` → orientation angle  
+   - `eccentricity` → ellipse eccentricity  
+   - `area` → object area in pixels  
+
+   Intensity statistics (require intensity image):
+   - `mean` → mean intensity  
+   - `std` → intensity standard deviation  
+   - `min` / `max` → minimum and maximum intensity values  
+
+4. **Automatic analysis**
+   The selected statistics are automatically computed for all labeled objects.
+
+5. **Output**
+   Results are returned as a table (`DataFrame`) where:
+   - each row corresponds to one object
+   - each column corresponds to a selected measurement
+
+> 💡 Tip: This tool is useful for morphology analysis, particle quantification, cell measurements, and extracting features for downstream statistical or machine learning workflows.
+"""
+
+# ╔═╡ c4dc5882-f05d-4656-8956-1d7c5b940b95
+md"""
+##### Analyze Particles
+
+Label image:
+$(@bind label_image1778142352086 Select([nothing, image_keys...]))
+
+Intensity image (optional):
+$(@bind intensity_image1778142352086 Select([nothing, image_keys...]))
+
+Statistics:
+$(@bind stats_selection1778142352086 MultiSelect([
+:count,
+:centroid,
+:bbox,
+:aspect_ratio,
+:perimeter,
+:circularity,
+:roundness,
+:major_axis,
+:minor_axis,
+:angle,
+:eccentricity,
+:mean,
+:std,
+:min,
+:max,
+:area
+]))
+        
+"""
+
+
+# ╔═╡ 89cf2cf6-bb70-4fbf-8ea8-c13d028bb001
+
+if !isnothing(label_image1778142352086)
+    let 
+
+        labels = image_data[label_image1778142352086]
+       
+        stats = Symbol.(stats_selection1778142352086)
+
+        if isnothing(intensity_image1778142352086)
+
+                df = JIVECore.Analyze.region_stats(labels; stats=stats)
+
+        else
+
+            img = image_data[intensity_image1778142352086]
+            df = JIVECore.Analyze.region_stats(labels, img; stats=stats)
+
+        end
+        df
+    end
+end
+    
+
+
+# ╔═╡ 16dfd8e1-e468-4fe1-b1dd-0d147548154c
+md"""
+# 📈 Show Distribution
+
+This section allows you to visualize the **statistical distribution of particle measurements** obtained from a labeled image.
+
+The tool computes object statistics directly from the selected label image and displays their distribution as a histogram.
+
+**Steps to use it:**
+
+1. **Select the label image**  
+   Choose the segmented or labeled image containing the detected objects:  
+   $(@bind vis_label Select([nothing, image_keys...]))
+
+2. **Choose the statistic**  
+   Select which particle property to analyze:
+   - `count` → object pixel count  
+   - `area` → object area  
+   - `perimeter` → object perimeter length  
+   - `circularity` → circularity measurement  
+   - `eccentricity` → elongation of the object  
+   - `major_axis` → major ellipse axis length  
+   - `minor_axis` → minor ellipse axis length  
+
+3. **Fit a probability distribution (optional)**  
+   You can overlay a fitted statistical model:
+   - `Normal`
+   - `LogNormal`
+   - `Gamma`
+
+4. **Automatic analysis**
+   The selected statistic is automatically computed for all labeled objects.
+
+5. **Background removal**
+   The background label (`label = 0`) is automatically excluded from the analysis to avoid biasing the distribution.
+
+6. **Visualization**
+   The resulting histogram and optional fitted distribution are displayed automatically.
+
+> 💡 Tip: Distribution analysis is useful for studying particle populations, size variability, morphology trends, and comparing segmentation results across datasets.
+"""
+
+# ╔═╡ 12bb2507-9159-4bfe-b2f6-fb44a27848de
+md"""
+##### Show Distribution
+
+Select label image:
+$(@bind vis_label1778145034366 Select([nothing, image_keys...]))
+
+Statistic:
+$(@bind vis_stat1778145034366 Select([
+"count",
+"area",
+"perimeter",
+"circularity",
+"eccentricity",
+"major_axis",
+"minor_axis"
+]))
+
+Fit distribution:
+$(@bind vis_fit1778145034366 Select([nothing, "Normal", "LogNormal", "Gamma"]))
+        
+"""
+
+
+# ╔═╡ 3e29d418-8387-4a74-ad6d-1d6259331d5a
+
+if !isnothing(vis_label1778145034366)
+		
+    labels1 = image_data[vis_label1778145034366]
+
+    # calcular SOLO la estadística seleccionada
+    stat_sym1 = Symbol(vis_stat1778145034366)
+
+    df1 = JIVECore.Analyze.region_stats(
+        labels1;
+        stats=[stat_sym1]
+    )
+
+    # eliminar fondo (label 0)
+		if size(df1,1) > 1
+    		df1 = df1[2:end, :]
+	    end
+
+    vals1 = collect(skipmissing(df1[!, stat_sym1]))
+
+    fit_map = Dict(
+        "Normal" => Normal,
+        "LogNormal" => LogNormal,
+        "Gamma" => Gamma
+    )
+
+    fit_dist = haskey(fit_map, vis_fit1778145034366) ? fit_map[vis_fit1778145034366] : nothing
+		
+
+    JIVECore.Visualize.showDist(
+        vals1;
+        fit_dist=fit_dist
+    )
+
+end
+
+
+# ╔═╡ 601b1422-002e-42ec-aeaf-fe49ab65bf1d
+md"""
+# 📊 Show Bar Plot
+
+This section allows you to visualize **particle statistics as a bar plot** from a labeled image.
+
+The selected statistic is computed for each labeled object and displayed as individual bars.
+
+**Steps to use it:**
+
+1. **Select the label image**  
+   Choose the segmented or labeled image containing the detected objects:  
+   $(@bind bar_im Select([nothing, image_keys...]))
+
+2. **Choose the statistic**  
+   Select which object property to display:
+   - `count` → object pixel count  
+   - `area` → object area  
+   - `perimeter` → object perimeter length  
+   - `major_axis` → major ellipse axis length  
+   - `minor_axis` → minor ellipse axis length  
+
+3. **Highlight the maximum value (optional)**  
+   Enable automatic highlighting of the object with the largest value:
+   $(@bind bar_highlight_max PlutoUI.CheckBox())
+
+4. **Highlight a specific object (optional)**  
+   You can manually highlight a specific object index:
+   $(@bind bar_highlight_idx NumberField(1:1000, default=0))
+
+5. **Select visualization range**  
+   Define the range of objects displayed in the plot:
+   $(@bind bar_range PlutoUI.RangeSlider(1:1:100))
+
+6. **Automatic analysis**
+   The selected statistic is automatically computed from the label image using `region_stats`.
+
+7. **Background removal**
+   The background label (`label = 0`) is automatically excluded from the visualization.
+
+8. **Visualization**
+   The selected values are displayed as a customizable bar plot.
+
+> 💡 Tip: Bar plots are useful for comparing particle properties individually, detecting outliers, and identifying dominant objects within segmented datasets.
+"""
+
+# ╔═╡ e8bd9d74-2a13-47da-aef3-42b007cfd02f
+md"""
+##### Show Bar Plot
+
+Select label image:
+$(@bind bar_im1778146335168 Select([nothing, image_keys...]))
+
+Statistic:
+$(@bind bar_stat1778146335168 Select([
+"count",
+"area",
+"perimeter",
+"major_axis",
+"minor_axis"
+]))
+
+Highlight maximum:
+$(@bind bar_highlight_max1778146335168 PlutoUI.CheckBox())
+
+Highlight index (optional):
+$(@bind bar_highlight_idx1778146335168 NumberField(1:1000, default=0))
+
+Range:
+$(@bind bar_range1778146335168 PlutoUI.RangeSlider(1:1:100))
+        
+"""
+
+
+# ╔═╡ 0f7792f5-ef98-4b96-b446-7298d132fe7c
+
+if !isnothing(bar_im1778146335168)
+
+    labels_bar = image_data[bar_im1778146335168]
+
+    stat_sym_bar = Symbol(bar_stat1778146335168)
+
+    # Compute selected statistic
+    df_bar = JIVECore.Analyze.region_stats(
+        labels_bar;
+        stats=[stat_sym_bar]
+    )
+
+    # Remove background
+    if size(df_bar,1) > 1
+        df_bar = df_bar[2:end, :]
+    end
+
+    vals_bar = collect(skipmissing(df_bar[!, stat_sym_bar]))
+
+    # Safe range
+    r0 = bar_range1778146335168[1]
+    r1 = min(bar_range1778146335168[end], length(vals_bar))
+
+    if r0 <= r1
+
+        JIVECore.Visualize.showBar(
+            vals_bar,
+            r0:r1;
+            highlight_max=bar_highlight_max1778146335168,
+            highlight_idx=bar_highlight_idx1778146335168,
+            highlight_color=:red3,
+            xlabel=string(stat_sym_bar),
+            title="Distribution of " * string(stat_sym_bar)
+        )
+
+    end
+
+end
+
+
+# ╔═╡ 98215cd2-d885-432f-8fde-5da49d42f73d
+
+
+# ╔═╡ 83685659-136e-4adc-a3e5-6e711504c76c
+md"""
+##### Image Histogram
+
+Select image:
+$(@bind hist_im1778143779206 Select([nothing, image_keys...]))
+
+Normalize counts:
+$(@bind hist_norm1778143779206 PlutoUI.CheckBox(false))
+
+Normalize edges (0-1):
+$(@bind hist_edges1778143779206 PlutoUI.CheckBox(false))
+        
+"""
+
+
+# ╔═╡ b0e5fa9d-d997-4427-8d0e-8fd23c295010
+
+
+let
+
+    if !isnothing(hist_im1778143779206)
+
+        img = image_data[hist_im1778143779206]
+        
+        # Si es AxisArray usamos .data
+        img_data = img isa JIVECore.Data.AxisArray ? img.data : img
+
+        # Detecta tipo de imagen
+        is_rgb = img_data isa JIVECore.Data.AbstractArray{<:JIVECore.Visualize.ColorTypes.RGB}
+
+        # Calcula histograma
+        if is_rgb
+            edges, counts = JIVECore.Process.imHistogram(img_data, 8; normalize=hist_norm1778143779206, normalize_edges=hist_edges1778143779206)
+        else
+            edges, counts = JIVECore.Process.imHistogram(img_data, 8; normalize=hist_norm1778143779206, normalize_edges=hist_edges1778143779206)
+        end
+
+        # Mostrar histograma
+        plt =JIVECore.Visualize.showHist(edges, counts)
+
+    end
+
+end # let
+
+    
+
 
 # ╔═╡ 57e02214-0c67-4f77-8502-1383933ebdd3
 JIVECore.Visualize.jive_theme(:dmol)
@@ -352,7 +1014,7 @@ uuid = "c87230d0-a227-11e9-1b43-d7ebe4e7570a"
 version = "0.4.5"
 
 [[deps.FFMPEG_jll]]
-deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
+deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers", "LAME_jll", "Libdl", "Ogg_jll", "OpenSSL_jll", "Opus_jll", "PCRE2_jll", "Zlib_jll", "libaom_jll", "libass_jll", "libfdk_aac_jll", "libva_jll", "libvorbis_jll", "x264_jll", "x265_jll"]
 git-tree-sha1 = "01ba9d15e9eae375dc1eb9589df76b3572acd3f2"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "8.0.1+0"
@@ -1321,6 +1983,12 @@ git-tree-sha1 = "7ed9347888fac59a618302ee38216dd0379c480d"
 uuid = "ea2f1a96-1ddc-540d-b46f-429655e07cfa"
 version = "0.9.12+0"
 
+[[deps.Xorg_libpciaccess_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
+git-tree-sha1 = "58972370b81423fc546c56a60ed1a009450177c3"
+uuid = "a65dc6b1-eb27-53a1-bb3e-dea574b5389e"
+version = "0.19.0+0"
+
 [[deps.Xorg_libxcb_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libXau_jll", "Xorg_libXdmcp_jll"]
 git-tree-sha1 = "bfcaf7ec088eaba362093393fe11aa141fa15422"
@@ -1433,6 +2101,12 @@ git-tree-sha1 = "9bf7903af251d2050b467f76bdbe57ce541f7f4f"
 uuid = "1183f4f0-6f2a-5f1a-908b-139f9cdfea6f"
 version = "0.2.2+0"
 
+[[deps.libdrm_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libpciaccess_jll"]
+git-tree-sha1 = "63aac0bcb0b582e11bad965cef4a689905456c03"
+uuid = "8e53e030-5e6c-5a89-a30b-be5b7263a166"
+version = "2.4.125+1"
+
 [[deps.libevdev_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "56d643b57b188d30cccc25e331d416d3d358e557"
@@ -1456,6 +2130,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "6ab498eaf50e0495f89e7a5b582816e2efb95f64"
 uuid = "b53b4c65-9356-5827-b1ea-8c7a1a84506f"
 version = "1.6.54+0"
+
+[[deps.libva_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libX11_jll", "Xorg_libXext_jll", "Xorg_libXfixes_jll", "libdrm_jll"]
+git-tree-sha1 = "7dbf96baae3310fe2fa0df0ccbb3c6288d5816c9"
+uuid = "9a156e7d-b971-5f62-b2c9-67348b8fb97c"
+version = "2.23.0+0"
 
 [[deps.libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll"]
@@ -1499,21 +2179,36 @@ version = "1.13.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═ce561158-ff61-11f0-0fb3-b1fbadb6d77f
-# ╠═b2afb52c-245d-4a14-91f0-00338c885f95
-# ╠═65b622d2-f27a-4bf3-92db-93d30331090d
-# ╠═41983fba-521a-4889-82fc-b578988ddbf8
-# ╠═40355151-858c-4036-959c-e661dd5eceb5
-# ╠═12aa752a-534b-4f01-86f9-8af60cec2cea
-# ╠═67793a85-9aa7-4ef9-b144-2b2f0cc991f1
-# ╠═eefd3fa5-ae4e-4a3b-a0ad-98dd2ebb853b
-# ╠═ec51ebb2-6dbe-4111-b48e-1637edd1b869
+# ╟─ef0cd906-8266-4843-8938-29e852aeed21
+# ╟─46fce1dc-832e-4654-befb-26705c34257b
+# ╟─7b7a53dc-ec78-4910-a09c-ffd37e060b39
+# ╟─0afaa75e-a832-4e62-8569-18555a0cfed0
+# ╟─c983d629-39ca-4abb-bf28-df48635e67b8
+# ╟─363a6eff-0705-4418-906e-96afd9ba2baf
+# ╟─68812098-f0ce-41ea-ba6d-fec40c627645
+# ╟─bcc4f7e7-4330-4dea-8cef-2ff6bf49f6d2
+# ╟─58513bf1-31ed-46ea-9f1b-c313551d9c80
+# ╟─4beff913-f56e-4c04-9673-64f2be0a4047
+# ╟─d71046f2-896d-4230-a2ac-e48e19e55681
+# ╟─1d81d26c-96fb-4caf-9cb5-832b416a2ce9
+# ╟─6e27a5a0-d636-4f57-a45d-d6d4d3328245
+# ╟─ca8b370a-a53d-43e8-aa51-b0b6a328bf6d
+# ╠═09f47719-53ac-4d19-82b8-e7221a3cdf1d
+# ╟─03cc2c33-a019-4bd0-b316-7e5f3ce11294
+# ╟─cf097589-bf42-4dbb-9a2e-1f142a648d25
+# ╟─86a4d5f7-5125-48c7-9c5d-050c559d70e8
+# ╟─c4dc5882-f05d-4656-8956-1d7c5b940b95
+# ╟─89cf2cf6-bb70-4fbf-8ea8-c13d028bb001
 # ╠═3d458265-ddc8-49af-ab86-0b82f01d5905
-# ╠═f7f78759-b888-4b3c-a2d5-96017c8a1777
-# ╠═dd06e9c5-1ef7-4aaa-af34-ad5aaa375f91
-# ╠═95f46300-70fe-427e-b231-f8adbb4b5d79
-# ╠═64f04029-7587-49ae-8932-9ee835ff6813
-# ╠═dea04bad-dbc0-4200-966a-d8f4e1d14a56
+# ╟─16dfd8e1-e468-4fe1-b1dd-0d147548154c
+# ╟─12bb2507-9159-4bfe-b2f6-fb44a27848de
+# ╟─3e29d418-8387-4a74-ad6d-1d6259331d5a
+# ╟─601b1422-002e-42ec-aeaf-fe49ab65bf1d
+# ╟─e8bd9d74-2a13-47da-aef3-42b007cfd02f
+# ╟─0f7792f5-ef98-4b96-b446-7298d132fe7c
+# ╠═98215cd2-d885-432f-8fde-5da49d42f73d
+# ╟─83685659-136e-4adc-a3e5-6e711504c76c
+# ╟─b0e5fa9d-d997-4427-8d0e-8fd23c295010
 # ╠═57e02214-0c67-4f77-8502-1383933ebdd3
 # ╠═1e1fe852-366d-43f2-8462-4b560bd8b139
 # ╠═54daefb6-2477-4f00-9804-e970f2ca89d9

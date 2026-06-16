@@ -539,7 +539,7 @@ $(@bind ${sb_v_corner} Select([:bottomleft, :bottomright, :topleft, :topright], 
             "Timestamp Options",
             `
 Image to add timestamp:
-$(@bind ${sel_img} Select(image_keys))
+$(@bind ${sel_img} Select([nothing, image_keys...]))
 
 Font size:
 $(@bind ${fontsize} NumberField(0.01:0.01:0.2, default=0.06))

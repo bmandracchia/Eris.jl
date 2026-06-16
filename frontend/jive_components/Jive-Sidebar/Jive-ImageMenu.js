@@ -163,10 +163,11 @@ $(@bind ${bitrate} Select([8, 16, 32, 64]))
                 const show_rgb = getVarName("rgb_show");
                 const apply_contrast = getVarName("rgb_contrast");
 
-                const sel_r = getVarName("rgb_r");
-                const sel_g = getVarName("rgb_g");
-                const sel_b = getVarName("rgb_b");
-
+                const rgb_r = getVarName("rgb_r");
+                const rgb_g = getVarName("rgb_g");
+                const rgb_b = getVarName("rgb_b");
+                const rgb_c4 = getVarName("rgb_c4");
+                const rgb_c5 = getVarName("rgb_c5");
                 ////////////////////////////////////
                 // UI CELL
                 ////////////////////////////////////
@@ -188,52 +189,82 @@ $(@bind ${apply_contrast} PlutoUI.CheckBox(default=true))
                 // Dynamic channel selector
                 ////////////////////////////////////
 
+                // =========================
+                // CELL 1: nC computation
+                // =========================
                 createCellWithCode(`
-
-            channels_options = begin
-
             if isnothing(${sel_im})
-                [:r,:g,:b]
-
+                nC = 0
             else
+                img_col = image_data[${sel_im}]
 
-                img_local = image_data[${sel_im}]
-
-                if img_local isa JIVECore.Data.AxisArray &&
-                (:C in JIVECore.Data.axisnames(img_local) ||
-                    :c in JIVECore.Data.axisnames(img_local))
-
-                    C_axis = findfirst(
-                        x -> lowercase(String(x)) == "c",
-                        JIVECore.Data.axisnames(img_local)
-                    )
-
-                    nC = size(parent(img_local), C_axis)
-
-                    Symbol.("C" .* string.(1:nC))
-
+                if img_col isa JIVECore.Data.AxisArray
+                    names = JIVECore.Data.axisnames(img_col)
+                    c_idx = findfirst(x -> lowercase(string(x)) == "c", names)
+                    nC = !isnothing(c_idx) ? size(parent(img_col), c_idx) : 3
                 else
-                    [:r,:g,:b,:m,:y,:c,:gray]
-
+                    nC = ndims(img_col) == 3 ? size(img_col, 3) : 1
                 end
-
             end
+            nothing
+            `);
+    await resolveAfterTimeout(300);
+    // =========================
+    // CELL 2: UI (NO accumulation!)
+    // =========================
+                createCellWithCode(`
+blocks = Any[]
 
-            end
+push!(blocks, md"""
+Channel 1:
+$(@bind ${rgb_r} Select([:r,:g,:b,:m,:y,:c,:gray]))
+""")
 
-md"""
-RGB Channel Mapping:
+if nC ≥ 2
+    push!(blocks, md"Channel 2: $(@bind ${rgb_g} Select([:r,:g,:b,:m,:y,:c,:gray]))")
+end
 
-R channel:
-$(@bind ${sel_r} Select(channels_options))
+if nC ≥ 3
+    push!(blocks, md"Channel 3: $(@bind ${rgb_b} Select([:r,:g,:b,:m,:y,:c,:gray]))")
+end
 
-G channel:
-$(@bind ${sel_g} Select(channels_options))
+if nC ≥ 4
+    push!(blocks, md"Channel 4: $(@bind ${rgb_c4} Select([:r,:g,:b,:m,:y,:c,:gray]))")
+end
 
-B channel:
-$(@bind ${sel_b} Select(channels_options))
-"""
-`);
+if nC ≥ 5
+    push!(blocks, md"Channel 5: $(@bind ${rgb_c5}  Select([:r,:g,:b,:m,:y,:c,:gray]))")
+end
+
+blocks
+            `);
+            await resolveAfterTimeout(300);
+    // =========================
+    // CELL 3: channels (reactive)
+    // =========================
+    createCellWithCode(`
+        channels = Symbol[]
+        
+        push!(channels, Symbol(${rgb_r}))
+        
+        if nC ≥ 2
+            push!(channels, Symbol(${rgb_g}))
+        end
+        
+        if nC ≥ 3
+            push!(channels, Symbol(${rgb_b}))
+        end
+        
+        if nC ≥ 4
+            push!(channels, Symbol(${rgb_c4}))
+        end
+        
+        if nC ≥ 5
+            push!(channels, Symbol(${rgb_c5}))
+        end
+        
+        nothing
+        `);
 
                 await resolveAfterTimeout(300);
 
@@ -253,11 +284,7 @@ $(@bind ${sel_b} Select(channels_options))
 
                 rgb_img = JIVECore.Data.im2rgb(
                     img;
-                    channels=[
-                        Symbol(${sel_r}),
-                        Symbol(${sel_g}),
-                        Symbol(${sel_b})
-                    ]
+                    channels=channels
                 )
 
                 if ${apply_contrast}

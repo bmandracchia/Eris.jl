@@ -87,40 +87,51 @@ export function createMeasureMenu(timeoutValue) {
 createMenuItem("Measure Image", async function () {
 
     const sel_im = getVarName("measure_im");
+    const add_measure = getVarName("add_measure");
+    const results_table = getVarName("results_table");
+    const last_add = getVarName("last_add");
 
     createMDCellWithUI(
         "Measure Image",
         `
 Select image:
 $(@bind ${sel_im} Select([nothing, image_keys...]))
-        `
+    
+Add measurement:
+$(@bind ${add_measure} PlutoUI.CounterButton("Add measurement"))
+    `
     );
 
     await resolveAfterTimeout(300);
-
     createCellWithCode(`
-
-let
-
-global results_table
-
-if !isnothing(${sel_im})
-
-    img = image_data[${sel_im}]
-
-    if isnothing(results_table[])
-        results_table[] = JIVECore.Analyze.stats_table(img)
-    else
-        results_table[] = JIVECore.Analyze.stats_table(img, df=results_table[])
-    end
-
-end
-
-results_table[]
-
-end
-
-`);
+        ${last_add} = Ref(0)
+        global ${results_table} = JIVECore.Analyze.DataFrame()
+        nothing
+        `);
+    
+    await resolveAfterTimeout(300);
+    createCellWithCode(`
+        let
+        if !isnothing(${sel_im})
+        
+            img = image_data[${sel_im}]
+        
+            # 🔥 Solo ejecuta si hubo nuevo click
+            if ${add_measure} > ${last_add}[]
+        
+                new_row = JIVECore.Analyze.stats_table(img)
+        
+                append!(${results_table}, new_row)
+                
+                ${last_add}[] = ${add_measure}   # 👈 marca como procesado
+        
+            end
+        
+        end
+        ${results_table}
+        end
+        
+        `);
 
 }),
 
@@ -132,6 +143,13 @@ createMenuItem("Measure with Threshold", async function () {
 
     const sel_im = getVarName("measure_thr_im");
     const threshold = getVarName("measure_thr_method");
+    const add_measure_thr = getVarName("add_measure");
+    const results_table_thr = getVarName("results_table_thr");
+    const last_add_thr = getVarName("last_add_thr");
+
+    ////////////////////////////////////
+    // UI
+    ////////////////////////////////////
 
     createMDCellWithUI(
         "Measure with Threshold",
@@ -139,34 +157,49 @@ createMenuItem("Measure with Threshold", async function () {
 Select image:
 $(@bind ${sel_im} Select([nothing, image_keys...]))
 
-Threshold:
+Threshold method:
 $(@bind ${threshold} Select(["auto","otsu"]))
+
+Add measurement:
+$(@bind ${add_measure_thr} PlutoUI.CounterButton("Add measurement"))
+
         `
     );
 
     await resolveAfterTimeout(300);
+    createCellWithCode(`
+        ${last_add_thr} = Ref(0)
+        global ${results_table_thr} = JIVECore.Analyze.DataFrame()
+        nothing
+        `);
+
+    await resolveAfterTimeout(300);
+
+    ////////////////////////////////////
+    // LOGIC CELL
+    ////////////////////////////////////
 
     createCellWithCode(`
 
-let
+    let
+    if !isnothing(${sel_im})
 
-global results_table
+        img = image_data[${sel_im}]
 
-if !isnothing(${sel_im})
+                if ${add_measure_thr} > ${last_add_thr}[]
+                new_row = JIVECore.Analyze.stats_table(
+                    img;
+                    threshold=${threshold}
+                    )
+                    append!(${results_table_thr}, new_row)
+                    ${last_add_thr}[] = ${add_measure_thr}
+                end
 
-    img = image_data[${sel_im}]
-
-    if isnothing(results_table[])
-        results_table[] = JIVECore.Analyze.stats_table(img, threshold=${threshold})
-    else
-        results_table[] = JIVECore.Analyze.stats_table(img, threshold=${threshold}, df=results_table[])
     end
 
-end
+    ${results_table_thr}
 
-results_table[]
-
-end
+    end
 
 `);
 
@@ -346,10 +379,14 @@ $(@bind ${sel_im} Select([nothing, image_keys...]))
 
 }),
 
+////////////////////////
+// SHOW DISTRIBUTION
+////////////////////////
+
 createMenuItem("Show Distribution", async function () {
 
-    const vis_df = getVarName("vis_df");
-    const vis_col = getVarName("vis_col");
+    const vis_label = getVarName("vis_label");
+    const vis_stat = getVarName("vis_stat");
     const vis_fit = getVarName("vis_fit");
 
     //////////////////////////////
@@ -359,8 +396,19 @@ createMenuItem("Show Distribution", async function () {
     createMDCellWithUI(
         "Show Distribution",
         `
-Select DataFrame:
-$(@bind ${vis_df} Select([nothing, df_keys...]))
+Select label image:
+$(@bind ${vis_label} Select([nothing, image_keys...]))
+
+Statistic:
+$(@bind ${vis_stat} Select([
+"count",
+"area",
+"perimeter",
+"circularity",
+"eccentricity",
+"major_axis",
+"minor_axis"
+]))
 
 Fit distribution:
 $(@bind ${vis_fit} Select([nothing, "Normal", "LogNormal", "Gamma"]))
@@ -370,32 +418,28 @@ $(@bind ${vis_fit} Select([nothing, "Normal", "LogNormal", "Gamma"]))
     await resolveAfterTimeout(300);
 
     //////////////////////////////
-    // Column selector
-    //////////////////////////////
-
-    createCellWithCode(`
-if !isnothing(${vis_df})
-
-    df_local = ${vis_df}
-
-    md"""
-Column:
-$(@bind ${vis_col} Select(names(df_local)))
-"""
-
-end
-`);
-
-    await resolveAfterTimeout(300);
-
-    //////////////////////////////
     // Plot
     //////////////////////////////
 
     createCellWithCode(`
-if !isnothing(${vis_df}) && !isnothing(${vis_col})
+if !isnothing(${vis_label})
 
-    df_local = ${vis_df}
+    labels = image_data[${vis_label}]
+
+    # calcular SOLO la estadística seleccionada
+    stat_sym = Symbol(${vis_stat})
+
+    df = JIVECore.Analyze.region_stats(
+        labels;
+        stats=[stat_sym]
+    )
+
+    # eliminar fondo (label 0)
+		if size(df,1) > 1
+    		df = df[2:end, :]
+	    end
+
+    vals = collect(skipmissing(df[!, stat_sym]))
 
     fit_map = Dict(
         "Normal" => Normal,
@@ -406,9 +450,100 @@ if !isnothing(${vis_df}) && !isnothing(${vis_col})
     fit_dist = haskey(fit_map, ${vis_fit}) ? fit_map[${vis_fit}] : nothing
 
     JIVECore.Visualize.showDist(
-        df_local.${vis_col};
+        vals;
         fit_dist=fit_dist
     )
+
+end
+`);
+
+}),
+
+////////////////////////
+// SHOW BAR PLOT
+////////////////////////
+
+createMenuItem("Show Bar Plot", async function () {
+
+    const bar_im = getVarName("bar_im");
+    const bar_stat = getVarName("bar_stat");
+    const bar_range = getVarName("bar_range");
+    const bar_highlight_max = getVarName("bar_highlight_max");
+    const bar_highlight_idx = getVarName("bar_highlight_idx");
+
+    //////////////////////////////
+    // UI
+    //////////////////////////////
+
+    createMDCellWithUI(
+        "Show Bar Plot",
+        `
+Select label image:
+$(@bind ${bar_im} Select([nothing, image_keys...]))
+
+Statistic:
+$(@bind ${bar_stat} Select([
+"count",
+"area",
+"perimeter",
+"major_axis",
+"minor_axis"
+]))
+
+Highlight maximum:
+$(@bind ${bar_highlight_max} PlutoUI.CheckBox())
+
+Highlight index (optional):
+$(@bind ${bar_highlight_idx} NumberField(0:1000, default=0))
+
+Range:
+$(@bind ${bar_range} PlutoUI.RangeSlider(1:1:100))
+        `
+    );
+
+    await resolveAfterTimeout(300);
+
+    //////////////////////////////
+    // Plot
+    //////////////////////////////
+
+    createCellWithCode(`
+if !isnothing(${bar_im})
+
+    labels_bar = image_data[${bar_im}]
+
+    stat_sym_bar = Symbol(${bar_stat})
+
+    # Compute selected statistic
+    df_bar = JIVECore.Analyze.region_stats(
+        labels_bar;
+        stats=[stat_sym_bar]
+    )
+
+    # Remove background
+    if size(df_bar,1) > 1
+        df_bar = df_bar[2:end, :]
+    end
+
+    vals_bar = collect(skipmissing(df_bar[!, stat_sym_bar]))
+
+    # Safe range
+    r0 = ${bar_range}[1]
+    r1 = min(${bar_range}[end], length(vals_bar))
+
+    if r0 <= r1
+
+        JIVECore.Visualize.showBar(
+            vals_bar,
+            r0:r1;
+            highlight_max=${bar_highlight_max},
+            highlight_idx=${bar_highlight_idx},
+            highlight_color=:red3,
+            xlabel=string(stat_sym_bar),
+            title="Distribution of " * string(stat_sym_bar)
+        )
+
+    end
 
 end
 `);
