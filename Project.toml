@@ -1,8 +1,8 @@
 name = "JIVEbook"
 uuid = "1f674130-1f75-11ef-3a7c-430c8081b4f7"
 license = "MIT"
-authors = ["Biagio Mandracchia <biagio.mandracchia@uva.es>", "Pablo Villacorta Aylagas <pablo.villacorta@uva.es>", "Fons van der Plas <fons@plutojl.org>"]
 version = "0.0.2"
+authors = ["Biagio Mandracchia <biagio.mandracchia@uva.es>", "Pablo Villacorta Aylagas <pablo.villacorta@uva.es>", "Fons van der Plas <fons@plutojl.org>"]
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -63,7 +63,7 @@ Malt = "1.1"
 Markdown = "1"
 MsgPack = "1.1"
 Pkg = "1"
-PlutoDependencyExplorer = "~1.0"
+PlutoDependencyExplorer = "~1.0, 1"
 PrecompileSignatures = "3"
 PrecompileTools = "=1.2.1"
 REPL = "1"
