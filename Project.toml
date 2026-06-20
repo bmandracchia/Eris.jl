@@ -1,8 +1,8 @@
 name = "JIVEbook"
 uuid = "1f674130-1f75-11ef-3a7c-430c8081b4f7"
 license = "MIT"
-authors = ["Biagio Mandracchia <biagio.mandracchia@uva.es>", "Pablo Villacorta Aylagas <pablo.villacorta@uva.es>", "Fons van der Plas <fons@plutojl.org>"]
 version = "0.0.2"
+authors = ["Biagio Mandracchia <biagio.mandracchia@uva.es>", "Pablo Villacorta Aylagas <pablo.villacorta@uva.es>", "Fons van der Plas <fons@plutojl.org>"]
 
 [deps]
 Base64 = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
@@ -53,7 +53,7 @@ ExpressionExplorer = "0.5, 0.6, 1"
 FileWatching = "1"
 FuzzyCompletions = "=0.5.4"
 HTTP = "^1.5.2"
-HypertextLiteral = "0.7, 0.8, 0.9"
+HypertextLiteral = "0.7, 0.8, 0.9, 1"
 InteractiveUtils = "1"
 JSON = "0.21.4"
 Logging = "1"
